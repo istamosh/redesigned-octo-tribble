@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import pymongo
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 
@@ -14,6 +14,16 @@ def is_valid_date(date):
             date = date[:-1] + '+00:00'
         datetime.fromisoformat(date)
         return True
+    except ValueError:
+        return False
+    
+def is_past_date(date):
+    try:
+        if date.endsWith('Z'):
+            date = date[:-1] + '+00:00'
+        ticket_time = datetime.fromisoformat(date)
+        now = datetime.now(timezone.utc)
+        return ticket_time < now
     except ValueError:
         return False
 
@@ -37,6 +47,8 @@ def list_or_create_ticket():
             
         if not is_valid_date(data["time"]):
             return jsonify({'error': 'Invalid date, must use this format YYYY-MM-DDTHH:MM:SSZ, example 2025-08-31T20:00:00Z'})
+        if is_past_date(data["time"]):
+            return jsonify({'error': 'Date cannot be in the past'})
 
         #TODO: create new ticket
         eventName = data['eventName']
