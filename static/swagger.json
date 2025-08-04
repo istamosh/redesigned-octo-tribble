@@ -34,7 +34,7 @@
     "/tickets": {
       "get": {
         "summary": "Get all tickets",
-        "description": "Returns a list of all tickets",
+        "description": "Returns a list of all tickets sorted by unused with date",
         "responses": {
           "200": {
             "description": "List of tickets",

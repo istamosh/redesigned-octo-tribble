@@ -51,7 +51,12 @@ def is_past_date(date):
             date = date[:-1] + '+00:00'
         ticket_time = datetime.fromisoformat(date)
         now = datetime.now(timezone.utc)
-        return ticket_time < now
+        
+        # get the date only
+        ticket_date = ticket_time.date()
+        today = now.date()
+        
+        return ticket_date <= today
     except ValueError:
         return False
 
@@ -61,7 +66,6 @@ def index():
 
 @app.route('/tickets', methods=['GET', 'POST'])
 def list_or_create_ticket():
-    #TODO: ticket model is consists of id (auto-gen), eventName, location, time, isUsed
     if request.method == 'POST':
         try:
             if not request.is_json:
@@ -80,7 +84,7 @@ def list_or_create_ticket():
             if not is_valid_date(data["time"]):
                 return jsonify({'error': 'Invalid date, must use this format YYYY-MM-DDTHH:MM:SSZ, example 2025-08-31T20:00:00Z'}), 400
             if is_past_date(data["time"]):
-                return jsonify({'error': 'Date cannot be in the past'}), 400
+                return jsonify({'error': 'Date must be in the future'}), 400
 
             post = {
                 "eventName": data["eventName"],
@@ -100,9 +104,12 @@ def list_or_create_ticket():
             logger.error(f'Error creating ticket: {str(e)}', exc_info=True)
             return jsonify({'error': f'Internal server error: {str(e)}'}), 500
     
-    #TODO: (optional) return only non-used and sorted
     try:
-        tickets = list(collection.find())
+        # sort by all unused then used, and earliest to later in the future
+        tickets = list(collection.find().sort([
+            ('isUsed', 1),
+            ('time', 1)
+            ]))
         for ticket in tickets:
             ticket['_id'] = str(ticket['_id'])
 
