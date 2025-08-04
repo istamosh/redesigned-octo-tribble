@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
-import pymongo
+from pymongo import MongoClient
 from datetime import datetime, timezone
 
 app = Flask(__name__)
 
-client = pymongo.MongoClient("localhost", 27017)
-db = client["ticketq-database"]
-collection = db["ticketq-collection"]
+client = MongoClient("mongodb://mongoadmin:passw0rd@localhost:27017/?authSource=admin")
+db = client["ticketqdb"]
+collection = db["ticketqcollection"]
 
 def is_valid_date(date):
     try:
@@ -33,7 +33,7 @@ def index():
 
 @app.route('/tickets', methods=['GET', 'POST'])
 def list_or_create_ticket():
-    #TODO: ticket model is consists of id, eventName, location, time, isUsed
+    #TODO: ticket model is consists of id (auto-gen), eventName, location, time, isUsed
     if request.method == 'POST':
         if not request.is_json:
             return jsonify({'error': 'Missing JSON in request'}), 400
@@ -50,9 +50,13 @@ def list_or_create_ticket():
         if is_past_date(data["time"]):
             return jsonify({'error': 'Date cannot be in the past'})
 
-        #TODO: create new ticket
-        eventName = data['eventName']
-        return f'Created new ticket: {eventName}\n'
+        collection.insert_one({
+            "eventName": data["eventName"],
+            "location": data["location"],
+            "time": data["time"],
+            "isUsed": False
+        })
+        return f'Successfully created new ticket: {data["eventName"]}!\n'
     
     return 'Currently viewing all tickets'
 

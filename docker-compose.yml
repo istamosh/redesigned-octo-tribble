@@ -1,14 +1,14 @@
-version: "3.8"
-
 services:
   mongo:
-    image: mongo:8.0
-    restart: always
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: passw0rd
     ports:
-      - "27017:27017"
+      - 27017:27017
     volumes:
-      - mongo-data:/data/db
-    
+      - mongodata:/data/db
+
   web:
     build: .
     command: ["uv", "run", "gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "4"]
@@ -17,5 +17,7 @@ services:
     depends_on:
       - mongo
 
+# volumes name (mongodata) should match from above
 volumes:
-  mongo-data:
+  mongodata:
+    driver: local
