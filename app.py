@@ -128,12 +128,25 @@ def manage_ticket(id):
             }), 200
 
         except Exception as e:
-            logger.error(f'Error creating ticket: {str(e)}', exc_info=True)
+            logger.error(f'Error marking ticket: {str(e)}', exc_info=True)
             return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
     elif request.method == 'DELETE':
-        #TODO: delete a ticket
-        return f'Ticket ID: {id} was successfully deleted'
+        try:
+            ticket = collection.delete_one({"_id": oid})
+
+            # check if nothing was affected
+            if ticket.deleted_count == 0:
+                return jsonify({'error': 'Ticket not found or already deleted'}), 404
+
+            return jsonify({
+                "message": "Successfully deleted a ticket",
+                "id": str(oid)
+            }), 200
+
+        except Exception as e:
+            logger.error(f'Error deleting ticket: {str(e)}', exc_info=True)
+            return jsonify({'error': f'Internal server error: {str(e)}'}), 500
     
     try:
         ticket = collection.find_one({"_id": oid})
@@ -150,10 +163,3 @@ def manage_ticket(id):
     except Exception as e:
         logger.error(f'Error viewing ticket: {str(e)}', exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
-
-
-# GET /tickets -list all tickets
-# GET /tickets/:id -view specific ticket
-# POST /tickets -create new ticket
-# PATCH /tickets/:id -mark ticket as used
-# DELETE /tickets/:id -remove a ticket
