@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 from bson.objectid import ObjectId
 from flask_swagger_ui import get_swaggerui_blueprint
+import os
 
 # set up basic logging
 import logging
@@ -24,7 +25,8 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-client = MongoClient("mongodb://mongoadmin:passw0rd@mongo:27017/?authSource=admin")
+MONGODB_URL = os.environ.get('MONGODB_URL', 'mongodb://mongoadmin:passw0rd@mongo:27017/?authSource=admin')
+client = MongoClient(MONGODB_URL)
 
 # test connection
 try:
@@ -184,3 +186,7 @@ def manage_ticket(id):
     except Exception as e:
         logger.error(f'Error viewing ticket: {str(e)}', exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+    
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)
