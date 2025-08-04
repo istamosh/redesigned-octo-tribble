@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime, timezone
+from bson.objectid import ObjectId
 
 # set up basic logging
 import logging
@@ -67,12 +68,14 @@ def list_or_create_ticket():
             if is_past_date(data["time"]):
                 return jsonify({'error': 'Date cannot be in the past'}), 400
 
-            result = collection.insert_one({
+            post = {
                 "eventName": data["eventName"],
                 "location": data["location"],
                 "time": data["time"],
                 "isUsed": False
-            })
+            }
+
+            result = collection.insert_one(post)
 
             return jsonify({
                 "message": f"Created new ticket: {data['eventName']}",
@@ -83,18 +86,70 @@ def list_or_create_ticket():
             logger.error(f'Error creating ticket: {str(e)}', exc_info=True)
             return jsonify({'error': f'Internal server error: {str(e)}'}), 500
     
-    return 'Currently viewing all tickets'
+    #TODO: (optional) return only non-used and sorted
+    try:
+        tickets = list(collection.find())
+        for ticket in tickets:
+            ticket['_id'] = str(ticket['_id'])
 
-@app.route('/tickets/<int:id>', methods=['GET', 'PATCH', 'DELETE'])
+        return jsonify({
+            "message": "Success retrieving all tickets",
+            "tickets": tickets
+        }), 200
+    
+    except Exception as e:
+        logger.error(f'Error viewing tickets: {str(e)}', exc_info=True)
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+    
+
+@app.route('/tickets/<string:id>', methods=['GET', 'PATCH', 'DELETE'])
 def manage_ticket(id):
+    try:
+        oid = ObjectId(id)
+    except:
+        return jsonify({'error': 'Invalid ticket ID format'}), 400
+
     if request.method == 'PATCH':
-        #TODO: mark ticket as used
-        return f'Ticket ID: {id} was successfully marked as used'
+        try:
+            ticket = collection.update_one(
+                {"_id": oid},
+                {"$set":
+                    {"isUsed": True}
+                }
+            )
+
+            # check if nothing was affected
+            if ticket.modified_count == 0:
+                return jsonify({'error': 'Ticket not found or already used'}), 404
+
+            return jsonify({
+                "message": "Successfully marked a ticket",
+                "id": str(oid)
+            }), 200
+
+        except Exception as e:
+            logger.error(f'Error creating ticket: {str(e)}', exc_info=True)
+            return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
     elif request.method == 'DELETE':
         #TODO: delete a ticket
         return f'Ticket ID: {id} was successfully deleted'
     
-    return f'Viewing a ticket with ID: {id}'
+    try:
+        ticket = collection.find_one({"_id": oid})
+        if not ticket:
+            return jsonify({'error': 'Ticket not found'}), 404
+        
+        ticket['_id'] = str(ticket['_id'])
+
+        return jsonify({
+            "message": "Success retrieving ticket",
+            "ticket": ticket
+        }), 200
+    
+    except Exception as e:
+        logger.error(f'Error viewing ticket: {str(e)}', exc_info=True)
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
 # GET /tickets -list all tickets
