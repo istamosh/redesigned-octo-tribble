@@ -2,15 +2,28 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime, timezone
 
+# set up basic logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
-client = MongoClient("mongodb://mongoadmin:passw0rd@localhost:27017/?authSource=admin")
+client = MongoClient("mongodb://mongoadmin:passw0rd@mongo:27017/?authSource=admin")
+
+# test connection
+try:
+    client.admin.command('ping')
+    logger.info("Successfully connected to Mongo")
+except Exception as e:
+    logger.error(f"Could not connect to Mongo: {e}")
+
 db = client["ticketqdb"]
 collection = db["ticketqcollection"]
 
 def is_valid_date(date):
     try:
-        if date.endsWith('Z'):
+        if date.endswith('Z'):
             date = date[:-1] + '+00:00'
         datetime.fromisoformat(date)
         return True
@@ -19,7 +32,7 @@ def is_valid_date(date):
     
 def is_past_date(date):
     try:
-        if date.endsWith('Z'):
+        if date.endswith('Z'):
             date = date[:-1] + '+00:00'
         ticket_time = datetime.fromisoformat(date)
         now = datetime.now(timezone.utc)
@@ -35,28 +48,40 @@ def index():
 def list_or_create_ticket():
     #TODO: ticket model is consists of id (auto-gen), eventName, location, time, isUsed
     if request.method == 'POST':
-        if not request.is_json:
-            return jsonify({'error': 'Missing JSON in request'}), 400
-        
-        data = request.get_json()
-
-        required_fields = ["eventName", "location", "time"]
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
+        try:
+            if not request.is_json:
+                return jsonify({'error': 'Missing JSON in request'}), 400
             
-        if not is_valid_date(data["time"]):
-            return jsonify({'error': 'Invalid date, must use this format YYYY-MM-DDTHH:MM:SSZ, example 2025-08-31T20:00:00Z'})
-        if is_past_date(data["time"]):
-            return jsonify({'error': 'Date cannot be in the past'})
+            data = request.get_json()
 
-        collection.insert_one({
-            "eventName": data["eventName"],
-            "location": data["location"],
-            "time": data["time"],
-            "isUsed": False
-        })
-        return f'Successfully created new ticket: {data["eventName"]}!\n'
+            # log request
+            logger.debug(f"Received POST request: {data}")
+
+            required_fields = ["eventName", "location", "time"]
+            for field in required_fields:
+                if field not in data:
+                    return jsonify({'error': f'Missing required field: {field}'}), 400
+                
+            if not is_valid_date(data["time"]):
+                return jsonify({'error': 'Invalid date, must use this format YYYY-MM-DDTHH:MM:SSZ, example 2025-08-31T20:00:00Z'}), 400
+            if is_past_date(data["time"]):
+                return jsonify({'error': 'Date cannot be in the past'}), 400
+
+            result = collection.insert_one({
+                "eventName": data["eventName"],
+                "location": data["location"],
+                "time": data["time"],
+                "isUsed": False
+            })
+
+            return jsonify({
+                "message": f"Created new ticket: {data['eventName']}",
+                "id": str(result.inserted_id)
+            }), 201
+        
+        except Exception as e:
+            logger.error(f'Error creating ticket: {str(e)}', exc_info=True)
+            return jsonify({'error': f'Internal server error: {str(e)}'}), 500
     
     return 'Currently viewing all tickets'
 

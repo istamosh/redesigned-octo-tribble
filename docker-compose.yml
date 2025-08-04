@@ -11,9 +11,11 @@ services:
 
   web:
     build: .
-    command: ["uv", "run", "gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "4"]
+    command: ["uv", "run", "gunicorn", "--log-level", "debug", "app:app", "--bind", "0.0.0.0:8000", "--workers", "4"]
     ports:
       - "8000:8000"
+    environment:
+      MONGODB_URL: mongodb://mongoadmin:passw0rd@mongo:27017/?authSource=admin
     depends_on:
       - mongo
 
