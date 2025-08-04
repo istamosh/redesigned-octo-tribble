@@ -5,7 +5,7 @@ docker compose up --build -d
 
 voila!
 
-see what's inside the running container:
+see what's inside the mongoDB database using mongosh:
 ```bash
 docker exec -it <container_id> mongosh -u <user_name> -p <password>
 
@@ -13,3 +13,5 @@ docker exec -it <container_id> mongosh -u <user_name> -p <password>
 
 docker compose exec mongo mongosh -u <user_name> -p <password>
 ```
+
+Swagger Docs: `localhost:8000/docs`

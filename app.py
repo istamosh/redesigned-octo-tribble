@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime, timezone
 from bson.objectid import ObjectId
+from flask_swagger_ui import get_swaggerui_blueprint
 
 # set up basic logging
 import logging
@@ -9,6 +10,19 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# swagger
+SWAGGER_URL = '/docs'
+API_URL = '/static/swagger.json'
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': 'TicketQ API Documentation'
+    }
+)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 client = MongoClient("mongodb://mongoadmin:passw0rd@mongo:27017/?authSource=admin")
 
