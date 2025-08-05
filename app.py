@@ -35,8 +35,10 @@ try:
 except Exception as e:
     logger.error(f"Could not connect to Mongo: {e}")
 
-db = client["ticketqdb"]
-collection = db["ticketqcollection"]
+DATABASE = os.environ.get('DATABASE', 'ticketqdb')
+COLLECTION = os.environ.get('COLLECTION', 'ticketqcollection')
+db = client[DATABASE]
+collection = db[COLLECTION]
 
 def is_valid_date(date):
     try:
