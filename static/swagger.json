@@ -7,6 +7,10 @@
   },
   "servers": [
     {
+      "url": "https://warm-jessamine-alfifrr-17048706.koyeb.app",
+      "description": "Production server"
+    },
+    {
       "url": "http://localhost:8000",
       "description": "Local development server"
     }
